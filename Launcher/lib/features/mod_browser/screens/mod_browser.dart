@@ -12,7 +12,12 @@ import 'package:kyber_launcher/shared/ui/dialog/kyber_dialog.dart';
 import 'package:nexus_gql/nexus_gql.dart';
 
 class CategorizedModList extends StatefulWidget {
-  const CategorizedModList({super.key});
+  const CategorizedModList({
+    super.key,
+    this.scrollController,
+  });
+
+  final ScrollController? scrollController;
 
   @override
   State<CategorizedModList> createState() => _CategorizedModListState();
@@ -81,13 +86,14 @@ class _CategorizedModListState extends State<CategorizedModList> {
               }
 
               return GridView.builder(
+                controller: widget.scrollController,
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 375,
                   childAspectRatio: 16 / 9,
                   crossAxisSpacing: 15,
                   mainAxisSpacing: 15,
                 ),
-                padding: const .symmetric(
+                padding: const EdgeInsets.symmetric(
                   vertical: 20,
                   horizontal: 20,
                 ),
@@ -95,19 +101,16 @@ class _CategorizedModListState extends State<CategorizedModList> {
                   final mod = searchState.results[index];
                   return NMBModTile(
                     key: Key(mod.id),
-                    mod: .new(
+                    mod: Query$modsByCategory$mods$nodes(
                       name: mod.name,
                       downloads: mod.downloads,
                       id: mod.id,
                       modId: mod.modId,
                       summary: mod.summary,
                       uid: mod.uid,
-                      uploader: .new(
+                      uploader: Query$modsByCategory$mods$nodes$uploader(
                         name: mod.uploader.name,
                         avatar: mod.uploader.avatar,
-                        //recognizedAuthor: mod.uploader.recognizedAuthor,
-                        // TODO: Handle recognizedAuthor field properly
-                        // recognizedAuthor: false,
                       ),
                       author: mod.author,
                       fileSize: mod.fileSize,
@@ -126,7 +129,8 @@ class _CategorizedModListState extends State<CategorizedModList> {
 
             return BlocBuilder<ModBrowserCubit, ModBrowserState>(
               builder: (context, state) {
-                if (state is ModBrowserLoading) {
+                if (state is ModBrowserLoading &&
+                    (state.mods == null || state.mods!.isEmpty)) {
                   return const Center(child: ProgressRing());
                 }
 
@@ -134,9 +138,27 @@ class _CategorizedModListState extends State<CategorizedModList> {
                   return Center(child: Text(state.error));
                 }
 
-                state as ModBrowserLoaded;
+                List<Query$modsByCategory$mods$nodes> mods = [];
+                if (state is ModBrowserLoaded) {
+                  mods = state.mods;
+                } else if (state is ModBrowserLoading && state.mods != null) {
+                  mods = state.mods!;
+                }
+
+                if (mods.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No mods found'.toUpperCase(),
+                      style: const TextStyle(
+                        fontFamily: FontFamily.battlefrontUI,
+                        fontSize: 17,
+                      ),
+                    ),
+                  );
+                }
 
                 return GridView.builder(
+                  controller: widget.scrollController,
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 375,
                     childAspectRatio: 16 / 9,
@@ -148,13 +170,13 @@ class _CategorizedModListState extends State<CategorizedModList> {
                     horizontal: 20,
                   ),
                   itemBuilder: (context, index) {
-                    final mod = state.mods[index];
+                    final mod = mods[index];
                     return NMBModTile(
                       key: Key(mod.id),
                       mod: mod,
                     );
                   },
-                  itemCount: state.mods.length,
+                  itemCount: mods.length,
                 );
               },
             );

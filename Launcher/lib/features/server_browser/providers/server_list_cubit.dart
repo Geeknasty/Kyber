@@ -15,7 +15,7 @@ import 'package:kyber_launcher/injection_container.dart';
 
 List<ServicePlayer> _friends = [];
 
-const _pageLimit = 12;
+const _pageLimit = 200;
 
 class ServerListCubit extends Cubit<ServerListState> {
   bool _needsUpdate = false;
@@ -125,7 +125,10 @@ class ServerListCubit extends Cubit<ServerListState> {
 
     _needsUpdate = false;
 
-    final servers = await sl.get<KyberGRPCService>().serverBrowserClient.getServers(ServerListRequest());
+    final servers = await sl
+        .get<KyberGRPCService>()
+        .serverBrowserClient
+        .getServers(ServerListRequest());
     final s = servers.servers.map((e) {
       return Server(
         id: e.id,
@@ -188,9 +191,14 @@ class ServerListCubit extends Cubit<ServerListState> {
     }
 
     if (filter.modes.isNotEmpty) {
-      final mappedModes = filter.modes.where((e) => e != 'CO-OP').map((e) => filterModes.firstWhere((e1) => e == e1.$1).$2).toList();
+      final mappedModes = filter.modes
+          .where((e) => e != 'CO-OP')
+          .map((e) => filterModes.firstWhere((e1) => e == e1.$1).$2)
+          .toList();
       if (filter.modes.contains('CO-OP')) {
-        final coop = filterModes.firstWhere((e) => e.$1 == 'CO-OP').$2 as (String, String);
+        final coop =
+            filterModes.firstWhere((e) => e.$1 == 'CO-OP').$2
+                as (String, String);
         mappedModes
           ..add(coop.$1)
           ..add(coop.$2);
@@ -223,7 +231,9 @@ class ServerListCubit extends Cubit<ServerListState> {
     final groupedServers =
         List.of(s)
             .where(
-              (e) => e.meta.containsKey('instance_id') && e.meta.containsKey('persisted_id'),
+              (e) =>
+                  e.meta.containsKey('instance_id') &&
+                  e.meta.containsKey('persisted_id'),
             )
             .groupListsBy((element) => element.meta['persisted_id']!)
           ..removeWhere((k, v) => v.length < 2);
@@ -242,8 +252,12 @@ class ServerListCubit extends Cubit<ServerListState> {
             (e) => !serverGroups.keys.contains(e.meta['persisted_id'] ?? ''),
           ),
         ]..sort((a, b) {
-          final playerCountA = a is ServerGroup ? a.totalPlayerCount : (a as Server).playerCount;
-          final playerCountB = b is ServerGroup ? b.totalPlayerCount : (b as Server).playerCount;
+          final playerCountA = a is ServerGroup
+              ? a.totalPlayerCount
+              : (a as Server).playerCount;
+          final playerCountB = b is ServerGroup
+              ? b.totalPlayerCount
+              : (b as Server).playerCount;
           a = a is ServerGroup ? a.serverInfo : a as Server;
           b = b is ServerGroup ? b.serverInfo : b as Server;
 
@@ -281,8 +295,11 @@ class ServerListCubit extends Cubit<ServerListState> {
 
     if (filter.query != null && filter.query!.isNotEmpty) {
       newServers.removeWhere((element) {
-        final info = element is ServerGroup ? element.serverInfo : element as Server;
-        return !info.name.toLowerCase().contains(filter.query!.toLowerCase()) && !info.creator.toLowerCase().contains(filter.query!.toLowerCase());
+        final info = element is ServerGroup
+            ? element.serverInfo
+            : element as Server;
+        return !info.name.toLowerCase().contains(filter.query!.toLowerCase()) &&
+            !info.creator.toLowerCase().contains(filter.query!.toLowerCase());
       });
     }
 
@@ -291,7 +308,9 @@ class ServerListCubit extends Cubit<ServerListState> {
       _page = pages;
     }
 
-    final paginatedServers = pages == 0 ? const <Server>[] : newServers.skip((_page - 1) * _pageLimit).take(_pageLimit).toList();
+    final paginatedServers = pages == 0
+        ? const <Server>[]
+        : newServers.skip((_page - 1) * _pageLimit).take(_pageLimit).toList();
 
     emit(
       ServerListLoaded(

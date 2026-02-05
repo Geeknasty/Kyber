@@ -91,21 +91,26 @@ class ModBrowserCubit extends Cubit<ModBrowserState> {
   NexusCategory? currentCategory;
   SortBy currentSortBy = .endorsements;
   int timeFilter = 0;
-  int perPage = Preferences.general.modBrowserPerPage;
+  int perPage = 500;
+
+  List<Query$modsByCategory$mods$nodes> _allLoadedMods = [];
 
   Future<void> setPerPage(int value) async {
     Preferences.general.modBrowserPerPage = value;
-    perPage = value;
+    perPage = 500;
+    _allLoadedMods = [];
     await loadPage();
   }
 
   void setTimeFilter(int value) {
     timeFilter = value;
+    _allLoadedMods = [];
     loadPage();
   }
 
   void changeSortBy(SortBy sortBy) {
     currentSortBy = sortBy;
+    _allLoadedMods = [];
     loadPage();
   }
 
@@ -121,6 +126,7 @@ class ModBrowserCubit extends Cubit<ModBrowserState> {
 
     currentPage = page;
     currentCategory = category;
+    _allLoadedMods = [];
     emit(state);
     loadPage();
   }
@@ -129,7 +135,7 @@ class ModBrowserCubit extends Cubit<ModBrowserState> {
     if (state is ModBrowserLoaded) {
       final state = this.state as ModBrowserLoaded;
       if (state.page < state.totalPages) {
-        loadPage(page: state.page + 1);
+        loadPage(page: state.page + 1, append: true);
       }
     }
   }
@@ -160,7 +166,11 @@ class ModBrowserCubit extends Cubit<ModBrowserState> {
     return timeFilter;
   }
 
-  Future<void> loadPage({int page = 1, bool force = false}) async {
+  Future<void> loadPage({
+    int page = 1,
+    bool force = false,
+    bool append = false,
+  }) async {
     if (sl.get<NexusModsService>().apiToken == null) {
       return;
     }
@@ -169,12 +179,17 @@ class ModBrowserCubit extends Cubit<ModBrowserState> {
       return;
     }
 
+    final existingMods = append
+        ? _allLoadedMods
+        : <Query$modsByCategory$mods$nodes>[];
+
     emit(
       ModBrowserLoading(
         totalPages: state is ModBrowserLoaded
             ? (state as ModBrowserLoaded).totalPages
             : 0,
         page: page,
+        mods: existingMods,
       ),
     );
 
@@ -197,9 +212,17 @@ class ModBrowserCubit extends Cubit<ModBrowserState> {
         throw result.exception!;
       }
 
+      final newMods = result.parsedData!.mods.nodes;
+
+      if (append) {
+        _allLoadedMods = [...existingMods, ...newMods];
+      } else {
+        _allLoadedMods = newMods;
+      }
+
       return emit(
         ModBrowserLoaded(
-          mods: result.parsedData!.mods.nodes,
+          mods: _allLoadedMods,
           page: page,
           totalPages: (result.parsedData!.mods.totalCount / perPage).ceil(),
         ),
@@ -237,10 +260,12 @@ class ModBrowserLoading extends ModBrowserState {
   const ModBrowserLoading({
     this.page = 1,
     this.totalPages = 1,
+    this.mods,
   });
 
   final int page;
   final int totalPages;
+  final List<Query$modsByCategory$mods$nodes>? mods;
 }
 
 class ModBrowserLoaded extends ModBrowserState {
