@@ -148,31 +148,7 @@ class _HeaderBar extends StatelessWidget {
               flex: 2,
               child: _FilterDropdown(),
             ),
-            const SizedBox(width: 15),
-            SizedBox(
-              width: 120,
-              child: BlocBuilder<ServerListCubit, ServerListState>(
-                builder: (context, state) {
-                  final pageText = '${state.page ?? 0}/${state.pages ?? 0}';
-
-                  return KyberTabBar(
-                    selectedIndex: -1,
-                    onChanged: (value) {
-                      if (value == 0) {
-                        context.read<ServerListCubit>().previousPage();
-                      } else if (value == 2) {
-                        context.read<ServerListCubit>().nextPage();
-                      }
-                    },
-                    tabs: [
-                      const Icon(mt.Icons.arrow_back_ios_new_rounded),
-                      Text(pageText),
-                      const Icon(mt.Icons.arrow_forward_ios_rounded),
-                    ],
-                  );
-                },
-              ),
-            ),
+            // REMOVED: Pagination widget (the entire SizedBox with page numbers and arrow buttons)
           ],
         ),
       ),
@@ -272,26 +248,26 @@ class _StatusWidget extends StatelessWidget {
         }
 
         return Padding(
-          padding: const .only(bottom: 20),
+          padding: const EdgeInsets.only(bottom: 20),
           child: KyberCard(
-            padding: .zero,
+            padding: EdgeInsets.zero,
             child: Column(
-              crossAxisAlignment: .stretch,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
                   height: 45,
                   child: Padding(
-                    padding: const .symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,
                     ),
                     child: Column(
-                      crossAxisAlignment: .start,
-                      mainAxisAlignment: .center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           'WARNING',
-                          style: .new(
+                          style: TextStyle(
                             fontFamily: FontFamily.battlefrontUI,
                             fontSize: 21,
                             color: kDefaultActiveColor,
@@ -311,7 +287,7 @@ class _StatusWidget extends StatelessWidget {
                 ),
                 const CardSection(),
                 Padding(
-                  padding: const .symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 12,
                   ),

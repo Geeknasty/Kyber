@@ -1,13 +1,7 @@
 import 'package:kyber_launcher/features/server_browser/models/server_filter.dart';
 
 class ServerListState {
-  const ServerListState({
-    this.pages = 1,
-    this.page = 1,
-  });
-
-  final int? page;
-  final int? pages;
+  const ServerListState();
 }
 
 class ServerListInitial extends ServerListState {
@@ -15,26 +9,19 @@ class ServerListInitial extends ServerListState {
 }
 
 class ServerListLoading extends ServerListState {
-  const ServerListLoading({this.page, this.pages, this.filter});
+  const ServerListLoading({this.filter});
 
   final ServerFilter? filter;
-  final int? page;
-  final int? pages;
 }
 
 class ServerListLoaded extends ServerListState {
   const ServerListLoaded({
     required this.servers,
-    required this.page,
-    required this.pages,
     required this.filter,
   });
 
   final ServerFilter filter;
-
   final List<Object> servers;
-  final int page;
-  final int pages;
 }
 
 class ServerListError extends ServerListState {

@@ -15,11 +15,8 @@ import 'package:kyber_launcher/injection_container.dart';
 
 List<ServicePlayer> _friends = [];
 
-const _pageLimit = 200;
-
 class ServerListCubit extends Cubit<ServerListState> {
   bool _needsUpdate = false;
-  int _page = 1;
 
   ServerListCubit() : super(const ServerListInitial()) {
     filter = ServerFilter();
@@ -72,15 +69,11 @@ class ServerListCubit extends Cubit<ServerListState> {
       return;
     }
 
-    _page = 1;
-
     if (state is ServerListLoaded) {
       final x = state as ServerListLoaded;
       emit(
         ServerListLoaded(
           servers: x.servers,
-          page: _page,
-          pages: x.pages,
           filter: filter,
         ),
       );
@@ -88,40 +81,12 @@ class ServerListCubit extends Cubit<ServerListState> {
 
     this.filter = filter;
 
-    emit(
-      ServerListLoading(page: _page, pages: state.pages, filter: this.filter),
-    );
+    emit(ServerListLoading(filter: this.filter));
     loadServers();
   }
 
-  void nextPage() {
-    if (state is ServerListLoaded) {
-      final x = state as ServerListLoaded;
-      if (x.page + 1 > x.pages) {
-        return;
-      }
-
-      _page = x.page + 1;
-      emit(ServerListLoading(page: _page, pages: x.pages, filter: filter));
-      loadServers();
-    }
-  }
-
-  void previousPage() {
-    if (state is ServerListLoaded) {
-      final x = state as ServerListLoaded;
-      if (x.page - 1 < 1) {
-        return;
-      }
-
-      _page = x.page - 1;
-      emit(ServerListLoading(page: _page, pages: x.pages, filter: filter));
-      loadServers();
-    }
-  }
-
   Future<void> loadServers() async {
-    emit(ServerListLoading(page: _page, pages: state.pages));
+    emit(const ServerListLoading());
 
     _needsUpdate = false;
 
@@ -303,20 +268,9 @@ class ServerListCubit extends Cubit<ServerListState> {
       });
     }
 
-    final pages = (newServers.length / _pageLimit).ceil();
-    if (_page > pages && pages > 0) {
-      _page = pages;
-    }
-
-    final paginatedServers = pages == 0
-        ? const <Server>[]
-        : newServers.skip((_page - 1) * _pageLimit).take(_pageLimit).toList();
-
     emit(
       ServerListLoaded(
-        servers: paginatedServers,
-        page: _page,
-        pages: pages,
+        servers: newServers,
         filter: filter,
       ),
     );
