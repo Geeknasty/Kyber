@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' as mt;
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:kyber_collection/kyber_collection.dart';
 import 'package:kyber_launcher/core/config/colors.dart';
@@ -114,6 +115,20 @@ class _ModInfoBoxState extends State<ModInfoBox> {
     setState(() {
       affectedFiles = data;
     });
+  }
+
+  Future<void> _copyAffectedFilesToClipboard() async {
+    if (affectedFiles == null || affectedFiles!.isEmpty) return;
+
+    final buffer = StringBuffer();
+
+    for (final entry in affectedFiles!.entries) {
+      for (final file in entry.value) {
+        buffer.writeln('${entry.key.toUpperCase()}: $file');
+      }
+    }
+
+    await Clipboard.setData(ClipboardData(text: buffer.toString().trim()));
   }
 
   static Map<String, List<String>> _readChunkedFilesInIsolate(
@@ -288,14 +303,7 @@ class _ModInfoBoxState extends State<ModInfoBox> {
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    Text(
-                                      '${widget.mod.details.version} - ${widget.mod.details.author}',
-                                      style: const TextStyle(
-                                        fontFamily: FontFamily.battlefrontUI,
-                                        fontSize: 15,
-                                        color: kWhiteColor,
-                                      ),
-                                    ),
+                                    _buildVersionAuthorText(),
                                   ],
                                 ),
                               ),
@@ -410,19 +418,87 @@ class _ModInfoBoxState extends State<ModInfoBox> {
                           ),
                         ),
                       SliverToBoxAdapter(
-                        child: KyberSectionDropdown(
-                          expanded: affectedFilesExpanded,
-                          onExpanded: (bool expanded) {
-                            setState(() {
-                              affectedFilesExpanded = expanded;
-                            });
+                        child: Column(
+                          children: [
+                            KyberSectionDropdown(
+                              expanded: affectedFilesExpanded,
+                              onExpanded: (bool expanded) {
+                                setState(() {
+                                  affectedFilesExpanded = expanded;
+                                });
 
-                            if (expanded && affectedFiles == null) {
-                              readAffectedFiles();
-                            }
-                          },
-                          title: 'AFFECTED FILES',
-                          child: const SizedBox.shrink(),
+                                if (expanded && affectedFiles == null) {
+                                  unawaited(readAffectedFiles());
+                                }
+                              },
+                              title: 'AFFECTED FILES',
+                              child: const SizedBox.shrink(),
+                            ),
+                            if (affectedFilesExpanded && affectedFiles != null)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 15,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Spacer(),
+                                    SizedBox(
+                                      height: 28,
+                                      child: ButtonBuilder(
+                                        onClick: _copyAffectedFilesToClipboard,
+                                        builder: (context, hovered) {
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: hovered
+                                                  ? kActiveColor.withValues(
+                                                      alpha: 0.2,
+                                                    )
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                              border: Border.all(
+                                                color: hovered
+                                                    ? kActiveColor
+                                                    : decoColor,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  mt.Icons.copy,
+                                                  size: 14,
+                                                  color: hovered
+                                                      ? kActiveColor
+                                                      : kWhiteColor,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'COPY TO CLIPBOARD',
+                                                  style: TextStyle(
+                                                    fontFamily: FontFamily
+                                                        .battlefrontUI,
+                                                    fontSize: 11,
+                                                    color: hovered
+                                                        ? kActiveColor
+                                                        : kWhiteColor,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       if (!affectedFilesExpanded)
@@ -450,6 +526,19 @@ class _ModInfoBoxState extends State<ModInfoBox> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildVersionAuthorText() {
+    final version = widget.mod.details.version;
+    final author = widget.mod.details.author;
+    return Text(
+      '$version - $author',
+      style: const TextStyle(
+        fontFamily: FontFamily.battlefrontUI,
+        fontSize: 15,
+        color: kWhiteColor,
       ),
     );
   }
