@@ -462,11 +462,11 @@ static int ServerPlayerForceSendChatMessage(lua_State* L)
     }
     int32_t channel = luaL_checkinteger(L, 2);
 
-    if (!lua_isstring(L, 2))
+    if (!lua_isstring(L, 3))
     {
         return 0;
     }
-    const char* message = luaL_checkstring(L, 2);
+    const char* message = luaL_checkstring(L, 3);
 
     player->ForceSendChatMessage((ChatChannel)channel, message);
     return 1;
