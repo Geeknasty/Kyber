@@ -44,7 +44,7 @@ class ServerListCubit extends Cubit<ServerListState> {
         return;
       }
 
-      loadServers();
+      loadServers(silent: true);
     });
   }
 
@@ -59,7 +59,7 @@ class ServerListCubit extends Cubit<ServerListState> {
 
   void checkUpdate() {
     if (_needsUpdate) {
-      loadServers();
+      loadServers(silent: true);
       _needsUpdate = false;
     }
   }
@@ -85,8 +85,12 @@ class ServerListCubit extends Cubit<ServerListState> {
     loadServers();
   }
 
-  Future<void> loadServers() async {
-    emit(const ServerListLoading());
+  Future<void> loadServers({bool silent = false}) async {
+    // On silent refresh (periodic update), keep showing existing data
+    // so the list doesn't flicker or reset scroll position
+    if (!silent || state is! ServerListLoaded) {
+      emit(const ServerListLoading());
+    }
 
     _needsUpdate = false;
 

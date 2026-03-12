@@ -29,9 +29,17 @@ class ServerBrowser extends StatefulWidget {
 }
 
 class _ServerBrowserState extends State<ServerBrowser> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -73,8 +81,9 @@ class _ServerBrowserState extends State<ServerBrowser> {
               listenWhen: (previous, current) => current is ServerListLoaded,
               child: const _HeaderBar(),
             ),
-            content: const ServerListWidget(
-              key: Key('server_list'),
+            content: ServerListWidget(
+              key: const Key('server_list'),
+              scrollController: _scrollController,
             ),
           ),
         ),
