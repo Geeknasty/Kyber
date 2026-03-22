@@ -120,15 +120,13 @@ class _ModInfoBoxState extends State<ModInfoBox> {
   Future<void> _copyAffectedFilesToClipboard() async {
     if (affectedFiles == null || affectedFiles!.isEmpty) return;
 
-    final buffer = StringBuffer();
+    final json = const JsonEncoder.withIndent('  ').convert({
+      'mod_name': widget.mod.details.name,
+      'mod_version': widget.mod.details.version,
+      'affected_files': affectedFiles,
+    });
 
-    for (final entry in affectedFiles!.entries) {
-      for (final file in entry.value) {
-        buffer.writeln('${entry.key.toUpperCase()}: $file');
-      }
-    }
-
-    await Clipboard.setData(ClipboardData(text: buffer.toString().trim()));
+    await Clipboard.setData(ClipboardData(text: json));
   }
 
   static Map<String, List<String>> _readChunkedFilesInIsolate(
