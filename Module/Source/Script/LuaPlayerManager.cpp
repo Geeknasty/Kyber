@@ -3,7 +3,7 @@
 #define _WINSOCKAPI_
 #include <Script/LuaPlayerManager.h>
 #include <Hook/HookManager.h>
-
+#include <Script/LuaDataContainer.h>
 #include <Core/Program.h>
 #include <SDK/Funcs.h>
 
@@ -693,16 +693,19 @@ static int ServerPlayerIndex(lua_State* L)
         SpatialEntity* entity = nullptr;
         if (!(entity = (SpatialEntity*)player->GetCharacterEntity()))
             entity = (SpatialEntity*)player->GetVehicleEntity();
-
+    
         if (entity == nullptr) { lua_pushnil(L); return 1; }
-
+    
         LinearTransform transform;
         entity->GetTransform(transform);
-
-        lua_createtable(L, 0, 3);
-        lua_pushnumber(L, transform.trans.x); lua_setfield(L, -2, "x");
-        lua_pushnumber(L, transform.trans.y); lua_setfield(L, -2, "y");
-        lua_pushnumber(L, transform.trans.z); lua_setfield(L, -2, "z");
+    
+        const TypeInfo* type = g_program->m_entityManager->GetNativeType("Vec3");
+        if (type == nullptr) { lua_pushnil(L); return 1; }
+    
+        Vec3* copied = reinterpret_cast<Vec3*>(LuaDataContainer::ValueTypeCreate(L, type));
+        *copied = transform.trans;
+        LuaValueTypeData data = { type, copied };
+        LuaUtils::Push(L, data);
         return 1;
     }
     else if (key == "health")
