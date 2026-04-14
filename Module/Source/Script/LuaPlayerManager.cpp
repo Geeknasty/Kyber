@@ -688,6 +688,32 @@ static int ServerPlayerIndex(lua_State* L)
         lua_pushboolean(L, player->GetCharacterEntity() != nullptr || player->GetVehicleEntity() != nullptr);
         return 1;
     }
+    else if (key == "position")
+    {
+        SpatialEntity* entity = nullptr;
+        if (!(entity = (SpatialEntity*)player->GetCharacterEntity()))
+            entity = (SpatialEntity*)player->GetVehicleEntity();
+
+        if (entity == nullptr) { lua_pushnil(L); return 1; }
+
+        LinearTransform transform;
+        entity->GetTransform(transform);
+
+        lua_createtable(L, 0, 3);
+        lua_pushnumber(L, transform.trans.x); lua_setfield(L, -2, "x");
+        lua_pushnumber(L, transform.trans.y); lua_setfield(L, -2, "y");
+        lua_pushnumber(L, transform.trans.z); lua_setfield(L, -2, "z");
+        return 1;
+    }
+    else if (key == "health")
+    {
+        auto* entity = player->GetCharacterEntity();
+        if (entity == nullptr) { lua_pushnil(L); return 1; }
+        auto* healthComponent = entity->GetHealthComponent();
+        if (healthComponent == nullptr) { lua_pushnil(L); return 1; }
+        lua_pushnumber(L, healthComponent->m_health);
+        return 1;
+    }
 
     return 0;
 }
