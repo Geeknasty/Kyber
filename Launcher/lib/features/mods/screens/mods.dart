@@ -234,7 +234,7 @@ class _MainContent extends StatelessWidget {
                   onModSelected: onModSelected,
                   onSelectAll: onSelectAll,
                 )
-              : const CategorizedModList(),
+              : const _InfiniteScrollModBrowser(),
         );
       },
     );
@@ -480,6 +480,144 @@ class _CollectionsGrid extends StatelessWidget {
   }
 }
 
+class _InfiniteScrollModBrowser extends StatefulWidget {
+  const _InfiniteScrollModBrowser();
+
+  @override
+  State<_InfiniteScrollModBrowser> createState() =>
+      _InfiniteScrollModBrowserState();
+}
+
+class _InfiniteScrollModBrowserState extends State<_InfiniteScrollModBrowser> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    final delta = 200.0;
+
+    if (maxScroll - currentScroll <= delta) {
+      _loadMore();
+    }
+  }
+
+  void _loadMore() {
+    final cubit = context.read<ModBrowserCubit>();
+    final state = cubit.state;
+
+    if (state is ModBrowserLoaded) {
+      if (state.page < state.totalPages && !_isLoadingMore) {
+        setState(() => _isLoadingMore = true);
+        cubit.nextPage();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ModBrowserCubit, ModBrowserState>(
+      builder: (context, state) {
+        if (state is ModBrowserLoaded && _isLoadingMore) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _isLoadingMore = false);
+            }
+          });
+        }
+
+        if (state is ModBrowserLoading &&
+            (state.mods == null || state.mods!.isEmpty)) {
+          return const _LoadingIndicator();
+        }
+
+        if (state is ModBrowserError) {
+          return Center(
+            child: Text(
+              'ERROR: ${state.error}',
+              style: const TextStyle(fontFamily: FontFamily.battlefrontUI),
+            ),
+          );
+        }
+
+        List<dynamic> mods = [];
+        bool hasMore = false;
+
+        if (state is ModBrowserLoaded) {
+          mods = state.mods;
+          hasMore = state.page < state.totalPages;
+        } else if (state is ModBrowserLoading && state.mods != null) {
+          mods = state.mods!;
+          hasMore = true;
+        }
+
+        if (mods.isEmpty) {
+          return const Center(
+            child: Text(
+              'NO MODS FOUND',
+              style: TextStyle(fontFamily: FontFamily.battlefrontUI),
+            ),
+          );
+        }
+
+        return Stack(
+          children: [
+            CategorizedModList(scrollController: _scrollController),
+            if (hasMore && _isLoadingMore)
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: ProgressRing(),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'LOADING MORE...',
+                          style: TextStyle(
+                            fontFamily: FontFamily.battlefrontUI,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _Header extends StatelessWidget {
   const _Header({
     required this.pageIndex,
@@ -512,7 +650,6 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: 20),
         if (pageIndex == 0) _QuickActions(),
-        if (pageIndex == 1) const _BrowserPagination(),
       ],
     );
   }
@@ -664,61 +801,6 @@ class _QuickActions extends StatelessWidget {
         router.go('/settings?index=1');
       case 2:
         router.go('/mods/create_collection');
-    }
-  }
-}
-
-class _BrowserPagination extends StatelessWidget {
-  const _BrowserPagination();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 150,
-      child: BlocBuilder<ModBrowserCubit, ModBrowserState>(
-        builder: (context, state) {
-          final (page, totalPages) = _getPageInfo(context, state);
-
-          return KyberTabBar(
-            selectedIndex: -1,
-            onChanged: (value) => _handlePageChange(context, value),
-            tabs: [
-              const Icon(mt.Icons.arrow_back_ios_new_rounded),
-              Text('$page/$totalPages'.toUpperCase()),
-              const Icon(mt.Icons.arrow_forward_ios_rounded),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  (int, int) _getPageInfo(BuildContext context, ModBrowserState state) {
-    var page = 0;
-    var totalPages = 0;
-
-    if (state is ModBrowserLoaded) {
-      page = state.page;
-      totalPages = state.totalPages;
-    } else if (state is ModBrowserLoading) {
-      page = state.page;
-      totalPages = state.totalPages;
-    }
-
-    final searchState = context.watch<ModSearchCubit>().state;
-    if (searchState is! SearchInitial) {
-      return (1, 1);
-    }
-
-    return (page, totalPages);
-  }
-
-  void _handlePageChange(BuildContext context, int value) {
-    final cubit = context.read<ModBrowserCubit>();
-    if (value == 0) {
-      cubit.previousPage();
-    } else if (value == 2) {
-      cubit.nextPage();
     }
   }
 }

@@ -10,7 +10,9 @@ import 'package:kyber_launcher/gen/fonts.gen.dart';
 import 'package:kyber_launcher/shared/ui/ui.dart';
 
 class ServerListWidget extends StatefulWidget {
-  const ServerListWidget({super.key});
+  const ServerListWidget({super.key, this.scrollController});
+
+  final ScrollController? scrollController;
 
   @override
   State<ServerListWidget> createState() => _ServerListState();
@@ -35,6 +37,9 @@ class _ServerListState extends State<ServerListWidget> {
   Widget build(BuildContext context) {
     return BlocBuilder<ServerListCubit, ServerListState>(
       builder: (context, state) {
+        // Only show the loading spinner on the very first load (no data yet).
+        // Silent background refreshes keep the existing list visible so scroll
+        // position is preserved.
         if (state is ServerListLoading) {
           return const Column(
             children: [
@@ -45,7 +50,9 @@ class _ServerListState extends State<ServerListWidget> {
         }
 
         if (state is ServerListLoaded) {
-          return const RepaintBoundary(child: TableServerList());
+          return RepaintBoundary(
+            child: TableServerList(scrollController: widget.scrollController),
+          );
         }
 
         if (state is ServerListError) {

@@ -16,7 +16,9 @@ import 'package:kyber_launcher/gen/fonts.gen.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
 class TableServerList extends StatefulWidget {
-  const TableServerList({super.key});
+  const TableServerList({super.key, this.scrollController});
+
+  final ScrollController? scrollController;
 
   @override
   State<TableServerList> createState() => _TableServerListState();
@@ -64,6 +66,7 @@ class _TableServerListState extends State<TableServerList> {
                   return FadeIn(
                     duration: const Duration(milliseconds: 150),
                     child: SuperListView.builder(
+                      controller: widget.scrollController,
                       itemBuilder: (context, index) {
                         if (index == 0 ||
                             index ==

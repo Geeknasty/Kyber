@@ -28,9 +28,17 @@ class ServerBrowser extends StatefulWidget {
 }
 
 class _ServerBrowserState extends State<ServerBrowser> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -71,8 +79,9 @@ class _ServerBrowserState extends State<ServerBrowser> {
               listenWhen: (previous, current) => current is ServerListLoaded,
               child: const _HeaderBar(),
             ),
-            content: const ServerListWidget(
-              key: Key('server_list'),
+            content: ServerListWidget(
+              key: const Key('server_list'),
+              scrollController: _scrollController,
             ),
           ),
         ),
@@ -132,17 +141,7 @@ class _HeaderBar extends StatelessWidget {
               flex: 2,
               child: _FilterDropdown(),
             ),
-            const SizedBox(width: 15),
-            BlocBuilder<ServerListCubit, ServerListState>(
-              builder: (context, state) => SizedBox(
-                height: 35,
-                child: KyberPageSelector(
-                  current: state.page ?? 0,
-                  total: state.pages ?? 0,
-                  onPageChanged: context.read<ServerListCubit>().goToPage,
-                ),
-              ),
-            ),
+            // REMOVED: Pagination widget (the entire SizedBox with page numbers and arrow buttons)
           ],
         ),
       ),
@@ -242,26 +241,26 @@ class _StatusWidget extends StatelessWidget {
         }
 
         return Padding(
-          padding: const .only(bottom: 20),
+          padding: const EdgeInsets.only(bottom: 20),
           child: KyberCard(
-            padding: .zero,
+            padding: EdgeInsets.zero,
             child: Column(
-              crossAxisAlignment: .stretch,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
                   height: 45,
                   child: Padding(
-                    padding: const .symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,
                     ),
                     child: Column(
-                      crossAxisAlignment: .start,
-                      mainAxisAlignment: .center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           'WARNING',
-                          style: .new(
+                          style: TextStyle(
                             fontFamily: FontFamily.battlefrontUI,
                             fontSize: 21,
                             color: kDefaultActiveColor,
@@ -281,7 +280,7 @@ class _StatusWidget extends StatelessWidget {
                 ),
                 const CardSection(),
                 Padding(
-                  padding: const .symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 12,
                   ),

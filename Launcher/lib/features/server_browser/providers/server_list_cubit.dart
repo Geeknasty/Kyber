@@ -16,11 +16,8 @@ import 'package:kyber_launcher/injection_container.dart';
 
 List<ServicePlayer> _friends = [];
 
-const _pageLimit = 12;
-
 class ServerListCubit extends Cubit<ServerListState> {
   bool _needsUpdate = false;
-  int _page = 1;
 
   ServerListCubit() : super(const ServerListInitial()) {
     filter = ServerFilter();
@@ -48,7 +45,7 @@ class ServerListCubit extends Cubit<ServerListState> {
         return;
       }
 
-      loadServers();
+      loadServers(silent: true);
     });
   }
 
@@ -63,7 +60,7 @@ class ServerListCubit extends Cubit<ServerListState> {
 
   void checkUpdate() {
     if (_needsUpdate) {
-      loadServers();
+      loadServers(silent: true);
       _needsUpdate = false;
     }
   }
@@ -73,15 +70,11 @@ class ServerListCubit extends Cubit<ServerListState> {
       return;
     }
 
-    _page = 1;
-
     if (state is ServerListLoaded) {
       final x = state as ServerListLoaded;
       emit(
         ServerListLoaded(
           servers: x.servers,
-          page: _page,
-          pages: x.pages,
           filter: filter,
         ),
       );
@@ -89,56 +82,23 @@ class ServerListCubit extends Cubit<ServerListState> {
 
     this.filter = filter;
 
-    emit(
-      ServerListLoading(page: _page, pages: state.pages, filter: this.filter),
-    );
+    emit(ServerListLoading(filter: this.filter));
     loadServers();
   }
 
-  void goToPage(int page) {
-    if (state is ServerListLoaded) {
-      final x = state as ServerListLoaded;
-      if (page < 1 || page > x.pages) {
-        return;
-      }
-
-      _page = page;
-      emit(ServerListLoading(page: _page, pages: x.pages, filter: filter));
-      loadServers();
+  Future<void> loadServers({bool silent = false}) async {
+    // On silent refresh (periodic update), keep showing existing data
+    // so the list doesn't flicker or reset scroll position
+    if (!silent || state is! ServerListLoaded) {
+      emit(const ServerListLoading());
     }
-  }
-
-  void nextPage() {
-    if (state is ServerListLoaded) {
-      final x = state as ServerListLoaded;
-      if (x.page + 1 > x.pages) {
-        return;
-      }
-
-      _page = x.page + 1;
-      emit(ServerListLoading(page: _page, pages: x.pages, filter: filter));
-      loadServers();
-    }
-  }
-
-  void previousPage() {
-    if (state is ServerListLoaded) {
-      final x = state as ServerListLoaded;
-      if (x.page - 1 < 1) {
-        return;
-      }
-
-      _page = x.page - 1;
-      emit(ServerListLoading(page: _page, pages: x.pages, filter: filter));
-      loadServers();
-    }
-  }
-
-  Future<void> loadServers() async {
-    emit(ServerListLoading(page: _page, pages: state.pages));
 
     _needsUpdate = false;
 
+    final servers = await sl
+        .get<KyberGRPCService>()
+        .serverBrowserClient
+        .getServers(ServerListRequest());
     final servers = await sl
         .get<KyberGRPCService>()
         .serverBrowserClient
@@ -338,20 +298,9 @@ class ServerListCubit extends Cubit<ServerListState> {
       });
     }
 
-    final pages = (newServers.length / _pageLimit).ceil();
-    if (_page > pages && pages > 0) {
-      _page = pages;
-    }
-
-    final paginatedServers = pages == 0
-        ? const <ServerEntry>[]
-        : newServers.skip((_page - 1) * _pageLimit).take(_pageLimit).toList();
-
     emit(
       ServerListLoaded(
-        servers: paginatedServers,
-        page: _page,
-        pages: pages,
+        servers: newServers,
         filter: filter,
       ),
     );
