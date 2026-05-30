@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +11,8 @@ import 'package:kyber_launcher/features/mod_browser/widgets/mod_details/mod_imag
 import 'package:kyber_launcher/features/mod_collections/dialogs/duplicated_file_dialog.dart';
 import 'package:kyber_launcher/features/mod_collections/extensions/mod_collection_extension.dart';
 import 'package:kyber_launcher/features/mods/providers/collection_editor_cubit.dart';
+import 'package:kyber_launcher/features/mods/dialogs/export_progress_dialog.dart';
+import 'package:kyber_launcher/features/mods/services/mod_pack_export_service.dart';
 import 'package:kyber_launcher/features/mods/services/mod_service.dart';
 import 'package:kyber_launcher/features/server_browser/widgets/server_list/server_list_header.dart';
 import 'package:kyber_launcher/features/settings/dialogs/chromium_download_dialog.dart';
@@ -21,7 +25,7 @@ import 'package:path/path.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'package:tinycolor2/tinycolor2.dart';
 
-class ModListEntry extends StatelessWidget {
+class ModListEntry extends StatefulWidget {
   const ModListEntry({
     required this.index,
     required this.hovered,
@@ -50,7 +54,49 @@ class ModListEntry extends StatelessWidget {
   final bool hovered;
 
   @override
+  State<ModListEntry> createState() => _ModListEntryState();
+}
+
+class _ModListEntryState extends State<ModListEntry> {
+  Future<void> _handleExport(BuildContext ctx) async {
+    final mod = widget.mod;
+
+    final selectedDir = await ModPackExportService.pickExportDirectory(mod);
+    if (selectedDir == null) return;
+
+    if (!ctx.mounted) return;
+
+    final progressController = StreamController<String>.broadcast();
+
+    unawaited(
+      showKyberDialog<String?>(
+        context: ctx,
+        barrierDismissible: false,
+        builder: (_) => ExportProgressDialog(
+          packName: mod.details.name,
+          progressStream: progressController.stream,
+          exportFuture: ModPackExportService.exportPack(
+            mod,
+            selectedDir,
+            onProgress: progressController.add,
+          ),
+        ),
+      ).then((_) => progressController.close()),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final mod = widget.mod;
+    final subIndex = widget.subIndex;
+    final isLastSubItem = widget.isLastSubItem;
+    final onHover = widget.onHover;
+    final onSelected = widget.onSelected;
+    final onExpandCollection = widget.onExpandCollection;
+    final selected = widget.selected;
+    final index = widget.index;
+    final expanded = widget.expanded;
+    final hovered = widget.hovered;
     return DragItemWidget(
       dragItemProvider: (request) async {
         if (mod.isCollection) {
@@ -256,6 +302,30 @@ class ModListEntry extends StatelessWidget {
                                   fontFamily: FontFamily.battlefrontUI,
                                   color: kWhiteColor1,
                                 ),
+                              ),
+                              ButtonBuilder(
+                                onClick: () => _handleExport(context),
+                                builder: (context, hovered) {
+                                  return AbsorbPointer(
+                                    child: Tooltip(
+                                      message: 'Export pack contents',
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                          vertical: 8,
+                                        ),
+                                        child: SvgPicture.asset(
+                                          Assets.icons.kblCollection.path,
+                                          height: 12,
+                                          width: 12,
+                                          color: hovered
+                                              ? kActiveColor
+                                              : kWhiteColor,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                               ButtonBuilder(
                                 onClick: onExpandCollection,
