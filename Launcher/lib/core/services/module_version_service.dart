@@ -141,6 +141,10 @@ class ModuleVersionService {
     String? channel,
     KyberGRPCService? service,
   }) async {
+    if (module == VersionModule.installer) {
+      return false;
+    }
+
     if (Platform.isMacOS && module == VersionModule.installer) {
       return false;
     }
