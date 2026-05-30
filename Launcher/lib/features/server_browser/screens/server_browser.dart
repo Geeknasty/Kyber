@@ -141,6 +141,27 @@ class _HeaderBar extends StatelessWidget {
               flex: 2,
               child: _FilterDropdown(),
             ),
+
+            const SizedBox(width: 15),
+            BlocBuilder<ServerListCubit, ServerListState>(
+              builder: (context, state) {
+                if (state is! ServerListLoaded) {
+                  return const SizedBox.shrink();
+                }
+                final total = state.servers.fold<int>(
+                  0,
+                  (sum, entry) => sum + entry.totalPlayerCount,
+                );
+                return Text(
+                  '$total ONLINE',
+                  style: const TextStyle(
+                    fontFamily: FontFamily.battlefrontUI,
+                    fontSize: 13,
+                    color: kWhiteColor1,
+                  ),
+                );
+              },
+            ),
             // REMOVED: Pagination widget (the entire SizedBox with page numbers and arrow buttons)
           ],
         ),
