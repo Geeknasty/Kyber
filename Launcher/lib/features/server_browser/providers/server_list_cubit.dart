@@ -99,10 +99,6 @@ class ServerListCubit extends Cubit<ServerListState> {
         .get<KyberGRPCService>()
         .serverBrowserClient
         .getServers(ServerListRequest());
-    final servers = await sl
-        .get<KyberGRPCService>()
-        .serverBrowserClient
-        .getServers(ServerListRequest());
     final s = servers.servers.map((e) {
       return Server(
         id: e.id,

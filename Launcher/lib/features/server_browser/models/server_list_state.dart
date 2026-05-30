@@ -22,7 +22,7 @@ class ServerListLoaded extends ServerListState {
   });
 
   final ServerFilter filter;
-  final List<Object> servers;
+  final List<ServerEntry> servers;
 }
 
 class ServerListError extends ServerListState {
