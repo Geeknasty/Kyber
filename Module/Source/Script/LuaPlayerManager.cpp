@@ -66,7 +66,7 @@ static int CreatePlayerFunc(lua_State* L)
     const char* playerName = luaL_checkstring(L, 1);
 
     ServerPlayer* player = ServerPlayerManager_createPlayer(
-        g_program->m_server->GetServerGameContext()->serverPlayerManager, 0, playerName, LocalPlayerId_Invalid, 0xFFFFFFFF, false, false);
+        g_program->m_server->GetServerGameContext()->GetPlayerManager(), 0, playerName, LocalPlayerId_Invalid, 0xFFFFFFFF, false, false);
 
     player->SetTeam(2);
 
@@ -82,7 +82,7 @@ static int GetPlayerFunc(lua_State* L)
     }
     const char* playerName = luaL_checkstring(L, 1);
 
-    ServerPlayer* player = g_program->m_server->GetServerGameContext()->serverPlayerManager->GetPlayer(playerName);
+    ServerPlayer* player = g_program->m_server->GetServerGameContext()->GetPlayerManager()->GetPlayer(playerName);
     if (player == nullptr)
     {
         lua_pushnil(L);
@@ -104,7 +104,7 @@ static int GetPlayersFunc(lua_State* L)
         return 1;
     }
 
-    auto& playerList = serverGameContext->serverPlayerManager->m_players;
+    auto& playerList = serverGameContext->m_serverPlayerManager->m_players;
 
     lua_createtable(L, playerList.size(), 0);
 
@@ -328,14 +328,15 @@ static int ServerPlayerSetInvisible(lua_State* L)
     {
         return 0;
     }
-    bool forceInvisible = lua_toboolean(L, 2);
+    
+    bool setInvisible = lua_toboolean(L, 2);
 
     if (!player->GetCharacterEntity())
     {
         return 0;
     }
 
-    player->GetCharacterEntity()->ForceInvisible(forceInvisible);
+    player->GetCharacterEntity()->SetInvisible(setInvisible);
     return 1;
 }
 
@@ -501,7 +502,7 @@ static int ServerPlayerSendSyncedSettings(lua_State* L)
         return 0;
     }
 
-    ServerConnection* playerConnection = g_program->m_server->GetServerGameContext()->serverPeer->GetConnectionForPlayer(player);
+    ServerConnection* playerConnection = g_program->m_server->GetServerGameContext()->m_serverPeer->GetConnectionForPlayer(player);
     sendPlayerSyncedGameSettings(nullptr, playerConnection);
     return 0;
 }
@@ -521,6 +522,121 @@ static int ServerPlayerKick(lua_State* L)
     const char* kickReason = luaL_checkstring(L, 2);
     
     g_program->m_server->KickPlayer(player, kickReason);
+    return 1;
+}
+
+static int ServerPlayerSetImmortal(lua_State* L)
+{
+    ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
+    if (player == nullptr)
+    {
+        return 0;
+    }
+
+    if (!player->IsAlive())
+    {
+        return 0;
+    }
+
+    if (!lua_isboolean(L, 2))
+    {
+        return 0;
+    }
+    bool isImmortal = lua_toboolean(L, 2);
+
+    static_cast<WSServerSoldierHealthComponent*>(player->GetCharacterEntity()->GetHealthComponent())->SetIsImmortal(isImmortal);
+    return 1;
+}
+
+static int ServerPlayerSetFakeImmortal(lua_State* L)
+{
+    ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
+    if (player == nullptr)
+    {
+        return 0;
+    }
+
+    if (!player->IsAlive())
+    {
+        return 0;
+    }
+
+    if (!lua_isboolean(L, 2))
+    {
+        return 0;
+    }
+    bool isFakeImmortal = lua_toboolean(L, 2);
+
+    static_cast<WSServerSoldierHealthComponent*>(player->GetCharacterEntity()->GetHealthComponent())->SetIsFakeImmortal(isFakeImmortal);
+    return 1;
+}
+
+static int ServerPlayerSetExplosionDamageModifier(lua_State* L)
+{
+    ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
+    if (player == nullptr)
+    {
+        return 0;
+    }
+
+    if (!player->IsAlive())
+    {
+        return 0;
+    }
+
+    if (!lua_isnumber(L, 2))
+    {
+        return 0;
+    }
+    float value = lua_tonumber(L, 2);
+
+    static_cast<WSServerSoldierHealthComponent*>(player->GetCharacterEntity()->GetHealthComponent())->SetExplosionDamageModifier(value);
+    return 1;
+}
+
+static int ServerPlayerSetMoveSpeedMultiplier(lua_State* L)
+{
+    ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
+    if (player == nullptr)
+    {
+        return 0;
+    }
+
+    if (!player->IsAlive())
+    {
+        return 0;
+    }
+
+    if (!lua_isnumber(L, 2))
+    {
+        return 0;
+    }
+    float value = lua_tonumber(L, 2);
+
+    player->GetCharacterEntity()->SetMoveSpeedMultiplier(value);
+    return 1;
+}
+
+static int ServerPlayerSetCooldownModifier(lua_State* L)
+{
+    ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
+    if (player == nullptr)
+    {
+        return 0;
+    }
+
+    if (!player->IsAlive() || player->GetCharacterEntity() == nullptr)
+    {
+        return 0;
+    }
+
+    if (!lua_isnumber(L, 2))
+    {
+        return 0;
+    }
+    float value = lua_tonumber(L, 2);
+
+    player->GetCharacterEntity()->SetCooldownModifier(value);
     return 1;
 }
 
@@ -634,6 +750,31 @@ static int ServerPlayerIndex(lua_State* L)
         lua_pushcfunction(L, ServerPlayerSendChatMessage);
         return 1;
     }
+    else if (key == "SetImmortal")
+    {
+        lua_pushcfunction(L, ServerPlayerSetImmortal);
+        return 1;
+    }
+    else if (key == "SetFakeImmortal")
+    {
+        lua_pushcfunction(L, ServerPlayerSetFakeImmortal);
+        return 1;
+    }
+    else if (key == "SetExplosionDamageModifier")
+    {
+        lua_pushcfunction(L, ServerPlayerSetExplosionDamageModifier);
+        return 1;
+    }
+    else if (key == "SetMoveSpeedMultiplier")
+    {
+        lua_pushcfunction(L, ServerPlayerSetMoveSpeedMultiplier);
+        return 1;
+    }
+    else if (key == "SetCooldownModifier")
+    {
+        lua_pushcfunction(L, ServerPlayerSetCooldownModifier);
+        return 1;
+    }
     else if (key == "name")
     {
         lua_pushstring(L, player->m_name);
@@ -694,9 +835,9 @@ static int ServerPlayerIndex(lua_State* L)
         lua_pushboolean(L, player->IsAIPlayer());
         return 1;
     }
-    else if (key == "isSpawned")
+    else if (key == "isAlive")
     {
-        lua_pushboolean(L, player->GetCharacterEntity() != nullptr || player->GetVehicleEntity() != nullptr);
+        lua_pushboolean(L, player->IsAlive());
         return 1;
     }
 
