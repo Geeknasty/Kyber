@@ -3,6 +3,7 @@
 #define _WINSOCKAPI_
 #include <Script/LuaPlayerManager.h>
 #include <Hook/HookManager.h>
+#include <Persistence/PersistenceManager.h>
 
 #include <Core/Program.h>
 #include <SDK/Funcs.h>
@@ -518,6 +519,62 @@ static int ServerPlayerKick(lua_State* L)
     return 1;
 }
 
+static int ServerPlayerGetAllStats(lua_State* L)
+{
+    ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
+    if (player == nullptr)
+    {
+        return 0;
+    }
+
+    PlayerStatsMap stats = GetAllPlayerStats(player);
+
+    lua_createtable(L, 0, stats.size());
+    for (const auto& entry : stats)
+    {
+        lua_pushnumber(L, entry.second);
+        lua_setfield(L, -2, entry.first.c_str());
+    }
+
+    return 1;
+}
+
+static int ServerPlayerGetStats(lua_State* L)
+{
+    ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
+    if (player == nullptr)
+    {
+        return 0;
+    }
+
+    if (!lua_istable(L, 2))
+    {
+        luaL_error(L, "Expected a table of stat keys as argument 2");
+        return 0;
+    }
+
+    PlayerStatsMap allStats = GetAllPlayerStats(player);
+
+    lua_createtable(L, 0, 0);
+
+    int keyCount = lua_rawlen(L, 2);
+    for (int i = 1; i <= keyCount; i++)
+    {
+        lua_rawgeti(L, 2, i);
+        const char* key = luaL_checkstring(L, -1);
+        lua_pop(L, 1);
+
+        auto it = allStats.find(key);
+        if (it != allStats.end())
+        {
+            lua_pushnumber(L, it->second);
+            lua_setfield(L, -2, key);
+        }
+    }
+
+    return 1;
+}
+
 static int ServerPlayerIndex(lua_State* L)
 {
     ServerPlayer* player = LuaPlayerManager::GetServerPlayer(L, 1);
@@ -686,6 +743,21 @@ static int ServerPlayerIndex(lua_State* L)
     else if (key == "isSpawned")
     {
         lua_pushboolean(L, player->GetCharacterEntity() != nullptr || player->GetVehicleEntity() != nullptr);
+        return 1;
+    }
+    else if (key == "GetAllStats")
+    {
+        lua_pushcfunction(L, ServerPlayerGetAllStats);
+        return 1;
+    }
+    else if (key == "GetStats")
+    {
+        lua_pushcfunction(L, ServerPlayerGetStats);
+        return 1;
+    }
+    else if (key == "longestKillstreak")
+    {
+        lua_pushinteger(L, player->GetPersistenceServerPlayerExtent()->m_longestKillstreak);
         return 1;
     }
 

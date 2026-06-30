@@ -134,6 +134,32 @@ PlayerStatsMap ExtractPlayerStats(ServerPlayer* player)
     return stats;
 }
 
+PlayerStatsMap GetAllPlayerStats(ServerPlayer* player)
+{
+    PlayerStatsMap stats;
+    if (player->IsAIPlayer() || player->IsSpectator())
+    {
+        return stats;
+    }
+
+    PersistenceServerPlayerExtent* extent = player->GetPersistenceServerPlayerExtent();
+    PersistentStorage* storage = extent->m_persistentStorage;
+    if (storage == nullptr)
+    {
+        return stats;
+    }
+
+    uint32_t count = storage->m_template->GetCount();
+    for (uint32_t i = 0; i < count; i++)
+    {
+        const char* name = storage->m_template->GetName(i);
+        uint32_t offset = storage->m_template->GetOffset(name);
+        stats[name] = storage->m_values[offset].current;
+    }
+
+    return stats;
+}
+
 void ApplyPlayerStats(void* inst, ServerPlayer* player, const PlayerStatsMap& stats)
 {
     PersistenceServerPlayerExtent* extent = player->GetPersistenceServerPlayerExtent();
