@@ -14,6 +14,7 @@
 
 namespace Kyber
 {
+PlayerStatsMap GetAllPlayerStats(ServerPlayer* player);
 class PersistenceManager
 {
 public:
