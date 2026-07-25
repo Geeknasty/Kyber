@@ -3,6 +3,7 @@
 #define _WINSOCKAPI_
 #include <Script/LuaPlayerManager.h>
 #include <Hook/HookManager.h>
+#include <Script/LuaDataContainer.h>
 #include <Persistence/PersistenceManager.h>
 
 #include <Core/Program.h>
@@ -912,19 +913,33 @@ static int ServerPlayerIndex(lua_State* L)
         lua_pushinteger(L, player->GetPersistenceServerPlayerExtent()->m_longestKillstreak);
         return 1;
     }
-    else if (key == "GetAllStats")
+    else if (key == "position")
     {
-        lua_pushcfunction(L, ServerPlayerGetAllStats);
+        SpatialEntity* entity = nullptr;
+        if (!(entity = (SpatialEntity*)player->GetCharacterEntity()))
+            entity = (SpatialEntity*)player->GetVehicleEntity();
+    
+        if (entity == nullptr) { lua_pushnil(L); return 1; }
+    
+        LinearTransform transform;
+        entity->GetTransform(transform);
+    
+        const TypeInfo* type = g_program->m_entityManager->GetNativeType("Vec3");
+        if (type == nullptr) { lua_pushnil(L); return 1; }
+    
+        Vec3* copied = reinterpret_cast<Vec3*>(LuaDataContainer::ValueTypeCreate(L, type));
+        *copied = transform.trans;
+        LuaValueTypeData data = { type, copied };
+        LuaUtils::Push(L, data);
         return 1;
     }
-    else if (key == "GetStats")
+    else if (key == "health")
     {
-        lua_pushcfunction(L, ServerPlayerGetStats);
-        return 1;
-    }
-    else if (key == "longestKillstreak")
-    {
-        lua_pushinteger(L, player->GetPersistenceServerPlayerExtent()->m_longestKillstreak);
+        auto* entity = player->GetCharacterEntity();
+        if (entity == nullptr) { lua_pushnil(L); return 1; }
+        auto* healthComponent = entity->GetHealthComponent();
+        if (healthComponent == nullptr) { lua_pushnil(L); return 1; }
+        lua_pushnumber(L, healthComponent->m_health);
         return 1;
     }
 
