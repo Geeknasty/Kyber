@@ -34,16 +34,16 @@ class KyberProxyCubit extends Cubit<KyberProxyState> {
     emit(state.copyWith(selectedProxy: proxyId));
   }
 
-  Future<void> loadProxies() {
-    return _ready = _loadProxies().whenComplete(() => _loading = false);
-  }
-
-  Future<void> _loadProxies() async {
+  Future<void> loadProxies({List<ProxyInfo>? initialProxies}) async {
     try {
-      final resp = await sl.get<KyberGRPCService>().proxyClient.getList(
-        Empty(),
-      );
-      final proxyList = List<ProxyInfo>.from(resp.proxies);
+      var proxyList = initialProxies;
+      if (proxyList == null) {
+        final resp = await sl.get<KyberGRPCService>().proxyClient.getList(
+          Empty(),
+        );
+
+        proxyList = List<ProxyInfo>.from(resp.proxies);
+      }
 
       if (proxyList.isEmpty) {
         _logger.warning('No proxies returned');

@@ -171,12 +171,6 @@ bool Server::IsRunning()
 void Server::Initialize()
 {
     InitializeGameHooks();
-
-    if (!g_program->m_isDedicatedServer)
-    {
-        DisableGameHooks();
-    }
-
     InitializeGamePatches();
 
     m_persistenceManager->Initialize();
@@ -208,6 +202,11 @@ void Server::Start(const ServerCreationInfo& info, bool changeState)
     char* gameMode = StringUtils::CopyWithArena("GameMode=" + info.mode);
     gameSettings->DefaultLayerInclusion = gameMode;
 
+    // Populate misc server details for potential usage in plugins
+    ServerSettings* serverSettings = Settings<ServerSettings>("Server");
+    serverSettings->ServerName = StringUtils::CopyWithArena(info.name.c_str());
+    serverSettings->ServerPassword = StringUtils::CopyWithArena(info.password.c_str());
+
     m_creationInfo = info;
 
     g_program->m_server->Register(true);
@@ -233,7 +232,7 @@ void Server::Start(const ServerCreationInfo& info, bool changeState)
 
 void Server::KickPlayer(ServerPlayer* player, const char* reason)
 {
-    ServerConnection* serverConnection = GetServerGameContext()->serverPeer->GetConnectionForPlayer(player);
+    ServerConnection* serverConnection = GetServerGameContext()->m_serverPeer->GetConnectionForPlayer(player);
     serverConnection->SafeDisconnect(reason, SecureReason_KickedByAdmin);
 
     SendConsoleMessage(
@@ -328,10 +327,11 @@ void Server::SendChatMessage(ServerPlayer* player, const std::string& message)
     dummyPlayer.m_teamId = kServerTeamAdminMarker;
     memset(dummyPlayer.m_onlineId.m_id, 0, sizeof(OnlineId::m_id));
 
-    ServerConnection* serverConnection = GetServerGameContext()->serverPeer->GetConnectionForPlayer(player);
+    ServerConnection* serverConnection = GetServerGameContext()->m_serverPeer->GetConnectionForPlayer(player);
     serverConnection->SendChatMessage(ChatChannel_Admin, message.c_str(), dummyPlayer.m_onlineId);
 }
 
+// Unused
 void Server::SetDedicatedCreationInfo(const ServerCreationInfo& info)
 {
     if (!g_program->m_isDedicatedServer)
@@ -513,7 +513,7 @@ void OnlineServerPlayerExtentUpdateHk(OnlineServerPlayerExtent* inst, float delt
             }
         }
 
-        ServerConnection* serverConnection = g_program->m_server->GetServerGameContext()->serverPeer->GetConnectionForPlayer(player);
+        ServerConnection* serverConnection = g_program->m_server->GetServerGameContext()->m_serverPeer->GetConnectionForPlayer(player);
         serverConnection->SafeDisconnect("AFK timeout threshold exceeded.", SecureReason_InteractivityTimeout);
 
         g_program->m_server->SendConsoleMessage(
@@ -882,6 +882,25 @@ void Server::InitializeGamePatches()
     MemoryUtils::Patch((void*)OFFSET_SERVER_PATCH, (void*)ptch, sizeof(ptch));
     BYTE ptch2[] = { 0x90, 0x90 };
     MemoryUtils::Patch((void*)(OFFSET_SERVER_PATCH + 0x5), (void*)ptch2, sizeof(ptch2));
+}
+
+void Server::InitializeChatFilterPreset()
+{
+    g_program->GetAPI()->GetClientServer()->GetChatFilter([this](std::optional<const ChatFilterResponse*> response) {
+        if (!response)
+        {
+            KYBER_LOG(Error, "[Server] Failed to get preset chat filter list!");
+            return;
+        }
+
+        MutexGuard<ChatFilter> chatFilter = m_chatFilter.Lock();
+        for (const auto& phrase : (*response)->phrases()) 
+        {
+            chatFilter->AddBlockedPhrase(phrase.c_str());
+        }
+
+        KYBER_LOG(Info, "[Server] Initialized chat filter preset");
+    });
 }
 
 void Server::InitializeGameSettings()
