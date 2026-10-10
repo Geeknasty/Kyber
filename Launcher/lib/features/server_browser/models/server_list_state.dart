@@ -1,3 +1,4 @@
+import 'package:kyber_launcher/features/server_browser/models/server_entry.dart';
 import 'package:kyber_launcher/features/server_browser/models/server_filter.dart';
 
 class ServerListState {
@@ -21,7 +22,10 @@ class ServerListLoaded extends ServerListState {
   });
 
   final ServerFilter filter;
-  final List<Object> servers;
+
+  final List<ServerEntry> servers;
+  final int page;
+  final int pages;
 }
 
 class ServerListError extends ServerListState {

@@ -254,105 +254,117 @@ class _FrostyImportDialogState extends State<FrostyImportDialog> {
                                       margin: const EdgeInsets.symmetric(
                                         vertical: 5,
                                       ),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            if (selectedPacks.contains(index)) {
-                                              selectedPacks.remove(index);
-                                            } else {
-                                              selectedPacks.add(index);
-                                            }
-                                            updateModsToImport();
-                                          });
+                                      child: RadioGroup<int>(
+                                        groupValue:
+                                            selectedPacks.contains(index)
+                                            ? index
+                                            : null,
+                                        onChanged: (value) {
+                                          if (value != null) {
+                                            selectedPacks.add(index);
+                                          } else {
+                                            selectedPacks.remove(index);
+                                          }
+
+                                          updateModsToImport();
+                                          setState(() {});
                                         },
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 20,
-                                              height: 20,
-                                              decoration: BoxDecoration(
-                                                color: Colors.transparent,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color:
-                                                      selectedPacks.contains(
-                                                        index,
-                                                      )
-                                                      ? kActiveColor
-                                                      : kWhiteColor,
-                                                  width:
-                                                      selectedPacks.contains(
-                                                        index,
-                                                      )
-                                                      ? 5.0
-                                                      : 2.0,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: DefaultTextStyle.merge(
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: kButtonBorder,
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      children: [
-                                                        Icon(
-                                                          !invalidPacks.keys
-                                                                  .contains(
-                                                                    pack.packName,
-                                                                  )
-                                                              ? mt.Icons.check
-                                                              : mt
-                                                                    .Icons
-                                                                    .warning,
-                                                          color:
-                                                              !invalidPacks.keys
-                                                                  .contains(
-                                                                    pack.packName,
-                                                                  )
-                                                              ? Colors.green
-                                                              : Colors.red,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 8,
-                                                        ),
-                                                        Text(
-                                                          pack.packName,
-                                                          style: const TextStyle(
-                                                            fontFamily: FontFamily
-                                                                .battlefrontUI,
-                                                            fontSize: 20,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                      ],
+                                        child: RadioButton<int>(
+                                          value: index,
+                                          style: RadioButtonThemeData(
+                                            checkedDecoration:
+                                                WidgetStateProperty.resolveWith((
+                                                  states,
+                                                ) {
+                                                  return BoxDecoration(
+                                                    color: Colors.transparent,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color: (states.isHovered)
+                                                          ? kActiveColor
+                                                          : kWhiteColor,
+                                                      width: !states.isDisabled
+                                                          ? states.isHovered &&
+                                                                    !states
+                                                                        .isPressed
+                                                                ? 3.4
+                                                                : 5.0
+                                                          : 4.0,
                                                     ),
-                                                    if (invalidPacks.keys
-                                                        .contains(
-                                                          pack.packName,
-                                                        ))
-                                                      Expanded(
-                                                        child: Text(
-                                                          'Missing files: ${invalidPacks[pack.packName]!.join(', ')}',
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                        ),
-                                                      )
-                                                    else
-                                                      Text(
-                                                        '${formatBytes(pack.size, 1)} | ${pack.mods.length} Mods',
+                                                  );
+                                                }),
+                                          ),
+                                          content: Row(
+                                            children: [
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: DefaultTextStyle.merge(
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: kButtonBorder,
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          Icon(
+                                                            !invalidPacks.keys
+                                                                    .contains(
+                                                                      pack.packName,
+                                                                    )
+                                                                ? mt.Icons.check
+                                                                : mt
+                                                                      .Icons
+                                                                      .warning,
+                                                            color:
+                                                                !invalidPacks
+                                                                    .keys
+                                                                    .contains(
+                                                                      pack.packName,
+                                                                    )
+                                                                ? Colors.green
+                                                                : Colors.red,
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 8,
+                                                          ),
+                                                          Text(
+                                                            pack.packName,
+                                                            style: const TextStyle(
+                                                              fontFamily: FontFamily
+                                                                  .battlefrontUI,
+                                                              fontSize: 20,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                  ],
+                                                      if (invalidPacks.keys
+                                                          .contains(
+                                                            pack.packName,
+                                                          ))
+                                                        Expanded(
+                                                          child: Text(
+                                                            'Missing files: ${invalidPacks[pack.packName]!.join(', ')}',
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        )
+                                                      else
+                                                        Text(
+                                                          '${formatBytes(pack.size, 1)} | ${pack.mods.length} Mods',
+                                                        ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     );
@@ -384,7 +396,7 @@ class _FrostyImportDialogState extends State<FrostyImportDialog> {
           KyberButton(
             text: 'LOCATE',
             onPressed: () async {
-              final result = await FilePicker.platform.pickFiles(
+              final result = await FilePicker.pickFiles(
                 allowedExtensions: ['exe'],
                 dialogTitle: 'Select the Frosty Mod Manager executable',
                 type: FileType.custom,
@@ -398,10 +410,10 @@ class _FrostyImportDialogState extends State<FrostyImportDialog> {
 
               try {
                 _logger.info(
-                  'Located Frosty Mod Manager executable at ${result.files.single.path}',
+                  'Located Frosty Mod Manager executable at ${result.single.path}',
                 );
                 final directory = Directory(
-                  p.dirname(result.files.single.path!),
+                  p.dirname(result.single.path!),
                 );
                 final modsDirectory = Directory(
                   p.join(directory.path, 'Mods', 'starwarsbattlefrontii'),
