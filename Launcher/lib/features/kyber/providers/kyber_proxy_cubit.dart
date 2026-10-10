@@ -14,9 +14,10 @@ const _kPingTimeout = Duration(seconds: 2);
 const _kConnectTimeout = Duration(seconds: 10);
 const _kSamples = 10;
 const _kMaxConcurrentHosts = 2;
+const _kPingSchemes = ['ws', 'wss'];
 
 class KyberProxyCubit extends Cubit<KyberProxyState> {
-  KyberProxyCubit() : super(KyberProxyState(proxies: [])) {
+  KyberProxyCubit() : super(KyberProxyState(loading: true)) {
     loadProxies();
   }
 
@@ -34,16 +35,23 @@ class KyberProxyCubit extends Cubit<KyberProxyState> {
     emit(state.copyWith(selectedProxy: proxyId));
   }
 
-  Future<void> loadProxies() {
-    return _ready = _loadProxies().whenComplete(() => _loading = false);
+  Future<void> loadProxies({List<ProxyInfo>? initialProxies}) {
+    return _ready = _loadProxies(initialProxies: initialProxies)
+        .whenComplete(() => _loading = false);
   }
 
-  Future<void> _loadProxies() async {
+  Future<void> _loadProxies({List<ProxyInfo>? initialProxies}) async {
+    emit(state.copyWith(loading: true));
+
     try {
-      final resp = await sl.get<KyberGRPCService>().proxyClient.getList(
-        Empty(),
-      );
-      final proxyList = List<ProxyInfo>.from(resp.proxies);
+      var proxyList = initialProxies;
+      if (proxyList == null) {
+        final resp = await sl.get<KyberGRPCService>().proxyClient.getList(
+          Empty(),
+        );
+
+        proxyList = List<ProxyInfo>.from(resp.proxies);
+      }
 
       if (proxyList.isEmpty) {
         _logger.warning('No proxies returned');
@@ -110,16 +118,31 @@ class KyberProxyCubit extends Cubit<KyberProxyState> {
       }
     } catch (e, s) {
       _logger.severe('Failed to load proxies', e, s);
-      emit(state.copyWith(proxies: [], selectedProxy: ''));
+      emit(state.copyWith(proxies: [], selectedProxy: '', loading: false));
+    } finally {
+      if (!isClosed) {
+        emit(state.copyWith(loading: false));
+      }
     }
   }
 
   Future<int?> _measurePing(String host) async {
+    for (final scheme in _kPingSchemes) {
+      final ping = await _measurePingOver(Uri.parse('$scheme://$host/ping'));
+      if (ping != null) {
+        return ping;
+      }
+    }
+
+    return null;
+  }
+
+  Future<int?> _measurePingOver(Uri uri) async {
     IOWebSocketChannel? channel;
     StreamQueue? queue;
 
     try {
-      channel = IOWebSocketChannel.connect(Uri.parse('wss://$host/ping'));
+      channel = IOWebSocketChannel.connect(uri);
       await channel.ready.timeout(_kConnectTimeout);
 
       queue = StreamQueue(channel.stream.asBroadcastStream());
@@ -146,7 +169,7 @@ class KyberProxyCubit extends Cubit<KyberProxyState> {
 
       return samples[samples.length >> 1];
     } catch (e) {
-      _logger.warning('Ping failed for $host: $e');
+      _logger.warning('Ping failed for $uri: $e');
       return null;
     } finally {
       try {
@@ -182,15 +205,26 @@ class KyberProxy {
 }
 
 class KyberProxyState {
-  KyberProxyState({this.proxies = const [], this.selectedProxy = ''});
+  KyberProxyState({
+    this.proxies = const [],
+    this.selectedProxy = '',
+    this.loading = false,
+  });
 
   List<KyberProxy> proxies;
   String selectedProxy;
 
-  KyberProxyState copyWith({List<KyberProxy>? proxies, String? selectedProxy}) {
+  bool loading;
+
+  KyberProxyState copyWith({
+    List<KyberProxy>? proxies,
+    String? selectedProxy,
+    bool? loading,
+  }) {
     return KyberProxyState(
       proxies: proxies ?? this.proxies,
       selectedProxy: selectedProxy ?? this.selectedProxy,
+      loading: loading ?? this.loading,
     );
   }
 }
